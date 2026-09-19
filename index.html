@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TEF Canada — Entraîneurs</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    background: #f0f2f5;
+    color: #1a1a1a;
+    min-height: 100vh;
+    padding: 20px;
+  }
+
+  .wrap { max-width: 760px; margin: 0 auto; }
+
+  header {
+    background: #003087; color: white; padding: 18px 24px;
+    border-radius: 8px; margin-bottom: 20px;
+  }
+  header h1 { font-size: 20px; font-weight: 600; letter-spacing: 0.5px; }
+  header .subtitle { font-size: 13px; opacity: 0.8; margin-top: 4px; }
+
+  .card {
+    background: white; border-radius: 8px; padding: 24px; margin-bottom: 16px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.1); border-left: 4px solid #003087;
+    text-decoration: none; color: inherit; display: block;
+    transition: transform 0.12s, box-shadow 0.12s;
+  }
+  a.card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.13); }
+
+  .card h2 { font-size: 17px; color: #003087; margin-bottom: 8px; }
+  .card p { font-size: 14px; line-height: 1.65; color: #444; }
+  .card .method {
+    display: inline-block; margin-top: 12px; font-size: 12px; font-weight: 600;
+    color: #003087; background: #eef2fa; border-radius: 4px; padding: 5px 10px;
+    text-transform: uppercase; letter-spacing: 0.5px;
+  }
+
+  .note {
+    background: #fff8e6; border: 1px solid #f0d9a0; border-radius: 8px;
+    padding: 16px 20px; font-size: 13px; line-height: 1.7; color: #5a4a20;
+  }
+  .note strong { color: #7a5c00; }
+  .note code { background: #fff; border: 1px solid #e8d9b0; border-radius: 3px; padding: 1px 5px; font-size: 12px; }
+
+  footer { text-align: center; font-size: 12px; color: #888; margin-top: 24px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <h1>TEF Canada — Entraîneurs d'orthographe</h1>
+    <div class="subtitle">Regarder · Cacher · Écrire · Vérifier</div>
+  </header>
+
+  <a class="card" href="orthographe.html">
+    <h2>✍️ Entraîneur d'orthographe — mot par mot</h2>
+    <p>Drill sur les mots ratés en session d'écriture. Le mot apparaît dans sa phrase, syllabe piège surlignée, puis se cache : tu retapes la phrase complète de mémoire, comparée caractère par caractère. Notation type Anki (Encore · Difficile · Bien · Acquis).</p>
+    <span class="method">Pour les mots isolés</span>
+  </a>
+
+  <a class="card" href="paragraphe.html">
+    <h2>📝 Reconstitution de paragraphe</h2>
+    <p>Même méthode à l'échelle d'un texte entier. Colle un modèle corrigé, puis reconstitue-le ligne par ligne de mémoire. Suit ton score <em>et</em> ton nombre de relectures dans le temps — moins de relectures au même score = vraie mémorisation.</p>
+    <span class="method">Pour les tournures et la structure</span>
+  </a>
+
+  <div class="note">
+    <strong>Tes données restent sur cet appareil.</strong> Mots, scores et historique sont stockés dans le navigateur (localStorage) — rien n'est envoyé nulle part, aucun compte requis.
+    <br><br>
+    Pour passer du portable au téléphone : <code>⬇ Sauvegarder (.json)</code> ici → envoie-toi le fichier → <code>⬆ Restaurer (.json)</code> là-bas. La restauration <strong>remplace</strong> les données de l'appareil, elle ne les fusionne pas — garde toujours l'export le plus récent.
+  </div>
+
+  <footer>Outils personnels de préparation au TEF Canada · <a href="https://github.com/Arish813/tef-trainers" style="color:#888;">code source</a></footer>
+
+</div>
+</body>
+</html>

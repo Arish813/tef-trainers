@@ -1,0 +1,11 @@
+# Sauvegardes locales de données de pratique — ne jamais committer
+*-save-*.json
+tef-orthographe-banque.txt
+mots-a-revoir*.txt
+
+# OS / éditeurs
+.DS_Store
+Thumbs.db
+*~
+.vscode/
+.idea/

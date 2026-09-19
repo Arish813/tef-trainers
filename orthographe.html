@@ -1,0 +1,821 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TEF Canada — Entraîneur d'Orthographe</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: #f0f2f5;
+      color: #1a1a1a;
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    header {
+      background: #003087;
+      color: white;
+      padding: 14px 24px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    header h1 { font-size: 18px; font-weight: 600; letter-spacing: 0.5px; }
+    header .subtitle { font-size: 13px; opacity: 0.8; margin-top: 2px; }
+
+    .session-stats { text-align: right; font-size: 13px; }
+    .session-stats .big { font-size: 24px; font-weight: 700; font-variant-numeric: tabular-nums; }
+
+    /* Accent bar */
+    .accent-bar {
+      background: white;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      padding: 10px 16px;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    }
+    .accent-bar .bar-label {
+      font-size: 12px; color: #666; font-weight: 600;
+      text-transform: uppercase; letter-spacing: 0.5px;
+      margin-right: 4px; white-space: nowrap;
+    }
+    .accent-bar button {
+      background: #f5f7fa; border: 1px solid #ccc; border-radius: 5px;
+      padding: 5px 10px; font-size: 16px; cursor: pointer;
+      font-family: inherit; transition: background 0.15s, transform 0.1s;
+      min-width: 34px; text-align: center;
+    }
+    .accent-bar button:hover {
+      background: #003087; color: white; border-color: #003087;
+      transform: translateY(-1px);
+    }
+    .accent-bar button:active { transform: translateY(0); }
+    .accent-bar .separator { width: 1px; height: 24px; background: #ddd; margin: 0 4px; }
+
+    /* Card */
+    .card {
+      background: white;
+      border-radius: 8px;
+      padding: 32px;
+      margin-bottom: 20px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+      border-left: 4px solid #003087;
+      min-height: 340px;
+    }
+
+    .step-label {
+      font-size: 12px; font-weight: 700; color: #003087;
+      text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px;
+    }
+    .progress-tag { font-size: 12px; color: #888; float: right; }
+
+    .context-line {
+      font-size: 16px; color: #444; line-height: 1.7;
+      background: #f8f9fb; border: 1px solid #e0e4ea; border-radius: 6px;
+      padding: 14px 16px; margin: 14px 0;
+    }
+    .context-line .blank { color: #003087; font-weight: 700; letter-spacing: 1px; }
+
+    /* REGARDER — the word displayed big */
+    .word-display {
+      font-size: 46px; font-weight: 700; text-align: center;
+      letter-spacing: 2px; padding: 28px 0 12px; color: #1a1a1a;
+    }
+    .word-display .hot { color: #cc0000; background: #fff0f0; border-radius: 4px; padding: 0 2px; }
+    .cat-badge {
+      display: inline-block; font-size: 12px; font-weight: 600;
+      padding: 3px 10px; border-radius: 12px; text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .cat-phonétique { background: #fde7e7; color: #cc0000; }
+    .cat-accent     { background: #fff3e0; color: #e67e00; }
+    .cat-nombre     { background: #e3f2fd; color: #1565c0; }
+    .cat-grammaire  { background: #ede7f6; color: #5e35b1; }
+    .cat-autre      { background: #eceff1; color: #546e7a; }
+    .cat-center { text-align: center; margin-bottom: 8px; }
+
+    .hint-note { text-align: center; font-size: 13px; color: #888; margin-top: 6px; font-style: italic; }
+
+    /* ÉCRIRE input */
+    .write-input {
+      width: 100%; border: 2px solid #ccc; border-radius: 8px;
+      padding: 16px 18px; font-size: 20px; text-align: left;
+      font-family: 'Segoe UI', Arial, sans-serif; outline: none;
+      transition: border-color 0.2s; line-height: 1.6; resize: vertical;
+    }
+    .write-input:focus { border-color: #003087; box-shadow: 0 0 0 3px rgba(0,48,135,0.1); }
+
+    /* VÉRIFIER diff */
+    .verdict { text-align: center; padding: 16px 0; }
+    .verdict .icon { font-size: 40px; }
+    .verdict.correct .icon { color: #2e7d32; }
+    .verdict.wrong .icon { color: #cc0000; }
+    .diff-display {
+      font-size: 36px; font-weight: 700; text-align: center;
+      letter-spacing: 2px; padding: 12px 0; font-family: 'Courier New', monospace;
+    }
+    .diff-display .ok  { color: #2e7d32; }
+    .diff-display .bad { color: #cc0000; background: #fff0f0; text-decoration: underline wavy #cc0000; }
+    .diff-display .missing { color: #cc0000; background: #fff0f0; }
+    .your-answer { text-align: center; font-size: 15px; color: #888; margin-top: 4px; }
+    .your-answer .yb { color: #cc0000; font-weight: 600; }
+
+    /* Controls */
+    .controls { display: flex; gap: 10px; margin-top: 20px; justify-content: center; flex-wrap: wrap; }
+    .btn {
+      padding: 12px 28px; border-radius: 6px; border: none;
+      font-size: 15px; font-weight: 600; cursor: pointer; transition: background 0.15s;
+    }
+    .btn-primary { background: #003087; color: white; }
+    .btn-primary:hover { background: #00246b; }
+    .btn-secondary { background: #f0f2f5; color: #333; border: 1px solid #ccc; }
+    .btn-secondary:hover { background: #e0e4ea; }
+    .btn-danger { background: #fff0f0; color: #cc0000; border: 1px solid #ffcccc; }
+    .btn-danger:hover { background: #ffe0e0; }
+    .btn-ghost { background: transparent; color: #888; border: 1px solid #ddd; }
+    .btn-ghost:hover { background: #f5f5f5; }
+
+    /* Grade row (Anki-style) */
+    .grade-row {
+      display: grid; grid-template-columns: repeat(4, 1fr);
+      gap: 10px; margin-top: 20px;
+    }
+    .grade-btn {
+      display: flex; flex-direction: column; align-items: center; gap: 2px;
+      padding: 12px 8px; border-radius: 8px; border: 1px solid #ddd;
+      background: white; cursor: pointer; transition: transform 0.1s, box-shadow 0.15s;
+      font-family: inherit;
+    }
+    .grade-btn:hover { transform: translateY(-2px); box-shadow: 0 3px 8px rgba(0,0,0,0.12); }
+    .grade-btn:focus { outline: 3px solid rgba(0,48,135,0.25); outline-offset: 1px; }
+    .grade-btn.grade-default { border-width: 2px; }
+    .grade-btn .g-emoji { font-size: 22px; }
+    .grade-btn .g-label { font-size: 15px; font-weight: 700; color: #1a1a1a; }
+    .grade-btn .g-sub { font-size: 11px; color: #888; }
+    .grade-btn .g-key {
+      display: inline-block; background: #eceff1; color: #546e7a;
+      border-radius: 4px; padding: 0 5px; font-weight: 700; margin-left: 2px;
+    }
+    .g-again { border-color: #f3c2c2; } .g-again.grade-default { border-color: #cc0000; }
+    .g-hard  { border-color: #f6d9b0; } .g-hard.grade-default  { border-color: #e67e00; }
+    .g-good  { border-color: #b6ddb8; } .g-good.grade-default  { border-color: #2e7d32; }
+    .g-easy  { border-color: #b3d4f0; } .g-easy.grade-default  { border-color: #1565c0; }
+
+    @media (max-width: 600px) {
+      .grade-row { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    /* Toolbar */
+    .toolbar {
+      display: flex; justify-content: space-between; align-items: center;
+      gap: 10px; margin-bottom: 16px; flex-wrap: wrap;
+    }
+    .toolbar .left, .toolbar .right { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .pill {
+      font-size: 12px; background: white; border: 1px solid #ddd;
+      border-radius: 14px; padding: 5px 12px; color: #555;
+    }
+    .pill strong { color: #003087; }
+
+    /* Manager / modal */
+    .modal-overlay {
+      display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+      z-index: 100; justify-content: center; align-items: center; padding: 20px;
+    }
+    .modal-overlay.active { display: flex; }
+    .modal {
+      background: white; border-radius: 10px; padding: 28px;
+      max-width: 640px; width: 100%; max-height: 88vh; overflow-y: auto;
+    }
+    .modal h2 { font-size: 20px; margin-bottom: 6px; color: #003087; }
+    .modal p.help { color: #666; margin-bottom: 16px; line-height: 1.6; font-size: 14px; }
+    .modal textarea {
+      width: 100%; border: 1px solid #ccc; border-radius: 6px; padding: 12px;
+      font-family: 'Courier New', monospace; font-size: 13px; line-height: 1.6;
+      resize: vertical; outline: none; min-height: 180px;
+    }
+    .modal textarea:focus { border-color: #003087; }
+    .modal .fmt-example {
+      background: #f8f9fb; border: 1px solid #e0e4ea; border-radius: 6px;
+      padding: 12px; font-family: 'Courier New', monospace; font-size: 12px;
+      color: #555; margin: 10px 0; line-height: 1.7; white-space: pre-wrap;
+    }
+    .modal-actions { display: flex; gap: 10px; margin-top: 18px; justify-content: flex-end; flex-wrap: wrap; }
+
+    .word-table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 12px; }
+    .word-table th { text-align: left; color: #888; font-weight: 600; padding: 6px 8px; border-bottom: 2px solid #eee; font-size: 11px; text-transform: uppercase; }
+    .word-table td { padding: 6px 8px; border-bottom: 1px solid #f0f0f0; }
+    .word-table .mastery { font-variant-numeric: tabular-nums; }
+    .word-table .del { color: #cc0000; cursor: pointer; font-weight: 700; }
+
+    .empty-state { text-align: center; padding: 50px 20px; color: #888; }
+    .empty-state .big { font-size: 18px; color: #555; margin-bottom: 8px; }
+
+    .status-bar {
+      background: #003087; color: white; border-radius: 8px;
+      padding: 12px 20px; display: flex; justify-content: space-between;
+      align-items: center; font-size: 13px; margin-top: 4px; flex-wrap: wrap; gap: 8px;
+    }
+    .status-bar .tip { opacity: 0.85; font-style: italic; }
+    .status-bar .shortcut-hint { opacity: 0.7; font-size: 12px; }
+
+    @media (max-width: 600px) {
+      .word-display { font-size: 34px; }
+      .accent-bar { gap: 5px; }
+      .accent-bar button { padding: 5px 7px; font-size: 15px; min-width: 30px; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div>
+    <div class="subtitle">Orthographe — TEF Canada</div>
+    <h1>Entraîneur — Regarder · Cacher · Écrire · Vérifier</h1>
+  </div>
+  <div class="session-stats">
+    <div class="big"><span id="sCorrect">0</span> / <span id="sTotal">0</span></div>
+    <div>réussis cette session</div>
+  </div>
+</header>
+
+<!-- Accent Bar -->
+<div class="accent-bar">
+  <span class="bar-label">Accents</span>
+  <button onclick="insertAccent('é')" title="é">é</button>
+  <button onclick="insertAccent('è')" title="è">è</button>
+  <button onclick="insertAccent('ê')" title="ê">ê</button>
+  <button onclick="insertAccent('ë')" title="ë">ë</button>
+  <div class="separator"></div>
+  <button onclick="insertAccent('à')" title="à">à</button>
+  <button onclick="insertAccent('â')" title="â">â</button>
+  <div class="separator"></div>
+  <button onclick="insertAccent('ù')" title="ù">ù</button>
+  <button onclick="insertAccent('û')" title="û">û</button>
+  <div class="separator"></div>
+  <button onclick="insertAccent('ô')" title="ô">ô</button>
+  <div class="separator"></div>
+  <button onclick="insertAccent('î')" title="î">î</button>
+  <button onclick="insertAccent('ï')" title="ï">ï</button>
+  <div class="separator"></div>
+  <button onclick="insertAccent('ç')" title="ç">ç</button>
+  <button onclick="insertAccent('œ')" title="œ">œ</button>
+  <button onclick="insertAccent('æ')" title="æ">æ</button>
+  <div class="separator"></div>
+  <button onclick="insertAccent('É')" title="É">É</button>
+  <button onclick="insertAccent('È')" title="È">È</button>
+  <button onclick="insertAccent('Ê')" title="Ê">Ê</button>
+  <button onclick="insertAccent('À')" title="À">À</button>
+  <button onclick="insertAccent('Ç')" title="Ç">Ç</button>
+  <button onclick="insertAccent('-')" title="trait d'union">-</button>
+  <button onclick="insertAccent('’')" title="apostrophe">’</button>
+</div>
+
+<!-- Toolbar -->
+<div class="toolbar">
+  <div class="left">
+    <span class="pill">Banque : <strong id="bankCount">0</strong> mots</span>
+    <span class="pill">À revoir : <strong id="dueCount">0</strong></span>
+    <span class="pill">Maîtrisés : <strong id="masteredCount">0</strong></span>
+  </div>
+  <div class="right">
+    <button class="btn btn-secondary" onclick="openManager()">📝 Gérer les mots</button>
+    <button class="btn btn-ghost" onclick="resetSession()">↻ Nouvelle session</button>
+  </div>
+</div>
+
+<!-- Practice Card -->
+<div class="card" id="card">
+  <!-- filled by JS -->
+</div>
+
+<!-- Status bar -->
+<div class="status-bar">
+  <div class="tip" id="tipBar">💡 Regarde le mot, mémorise la partie en rouge, puis cache et écris de mémoire.</div>
+  <div class="shortcut-hint"><strong>Entrée</strong> = valider &nbsp;·&nbsp; notes <strong>1</strong>·<strong>2</strong>·<strong>3</strong>·<strong>4</strong> &nbsp;·&nbsp; <strong>Échap</strong> = revoir</div>
+</div>
+
+<!-- Manager modal -->
+<div class="modal-overlay" id="managerModal">
+  <div class="modal">
+    <h2>📝 Gérer la banque de mots</h2>
+    <p class="help">Colle de nouveaux mots, un par ligne. Seul le mot est obligatoire. Format avec séparateur <code>|</code> :</p>
+    <div class="fmt-example">mot | catégorie | phrase avec {{mot}} | indice
+─────────────────────────────────────────────
+quarante | nombre | Après plus de {{quarante}} heures de recherches | quaRANte
+heures | phonétique | Vingt {{heures}} plus tard | pas de "o" : h-eu-res
+après | accent | {{Après}} l'avalanche, les secours… | accent grave : aprÈS
+pendant | phonétique | Cela a duré {{pendant}} l'après-midi
+mené | phonétique | Ils ont {{mené}} les recherches
+
+Catégories : phonétique · accent · nombre · grammaire · autre
+{{...}} marque où le mot apparaît dans la phrase (cloze).
+L'indice (4e champ) met en valeur la partie difficile.</div>
+    <textarea id="importBox" placeholder="Colle tes mots ici…"></textarea>
+    <div class="modal-actions">
+      <button class="btn btn-primary" onclick="importWords()">＋ Ajouter à la banque</button>
+      <button class="btn btn-secondary" onclick="exportWords()" title="Liste des mots en texte brut — pratique à coller dans le chat">⬇ Exporter la liste (.txt)</button>
+      <button class="btn btn-ghost" onclick="closeManager()">Fermer</button>
+    </div>
+
+    <p class="help" style="margin-top:18px;"><strong>Transfert entre appareils</strong> — la banque et tes stats vivent dans ce navigateur uniquement. Pour passer du portable au téléphone : sauvegarde ici, envoie-toi le fichier, restaure là-bas.</p>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="backupSave()" title="Télécharge la banque complète + les stats dans un fichier .json">⬇ Sauvegarder tout (.json)</button>
+      <button class="btn btn-secondary" onclick="document.getElementById('restoreFile').click()" title="Recharge une sauvegarde .json — remplace la banque actuelle">⬆ Restaurer (.json)</button>
+      <input type="file" id="restoreFile" accept="application/json,.json" style="display:none" onchange="backupRestore(this)">
+    </div>
+
+    <div id="wordListWrap"></div>
+
+    <div class="modal-actions">
+      <button class="btn btn-danger" onclick="clearAllWords()">🗑 Vider toute la banque</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ════════════════════════════════════════════════════════════════════
+   ENTRAÎNEUR D'ORTHOGRAPHE — TEF Canada
+   Méthode : Regarder → Cacher → Écrire → Vérifier
+   Données persistées dans localStorage (clé: tef-ortho-v1)
+   ════════════════════════════════════════════════════════════════════ */
+
+const STORE_KEY = 'tef-ortho-v1';
+
+// ── Pré-chargement : les 10 mots de la session « Avalanche » (2026-06-20) ──
+const SEED_WORDS = [
+  { mot: 'a trouvé',          cat: 'grammaire',  ctx: 'Un chien {{a trouvé}} des traces.',                  hint: '"a" sans accent (= avait trouvé)' },
+  { mot: 'Après',             cat: 'accent',     ctx: '{{Après}} plus de vingt heures de recherches…',      hint: 'accent grave : aprÈS' },
+  { mot: 'finalement',        cat: 'phonétique', ctx: 'Ils ont {{finalement}} trouvé les randonneurs.',     hint: 'un seul n : fina-le-ment' },
+  { mot: 'pendant',           cat: 'phonétique', ctx: "Cela a duré {{pendant}} l'après-midi.",              hint: 'pas de n avant le d : pen-DANT' },
+  { mot: 'quarante',          cat: 'nombre',     ctx: 'Plus de {{quarante}} heures sous la neige.',         hint: 'quaRANte' },
+  { mot: 'heures',            cat: 'phonétique', ctx: 'Vingt {{heures}} plus tard.',                        hint: 'pas de "o" : h-eu-res' },
+  { mot: 'vingt',             cat: 'nombre',     ctx: 'Après {{vingt}} heures de secours.',                 hint: 'vinGT (g muet)' },
+  { mot: 'après-midi',        cat: 'accent',     ctx: "L'avalanche s'est produite dans l'{{après-midi}}.",  hint: 'accent + trait d\'union' },
+  { mot: 'mené',              cat: 'phonétique', ctx: 'Ils ont {{mené}} les recherches.',                   hint: 'mené, pas "mainé"' },
+  { mot: "l'un après l'autre",cat: 'accent',     ctx: 'Les randonneurs ont été extraits {{l\'un après l\'autre}}.', hint: 'accent sur aprÈS' }
+];
+
+let state = loadState();
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STORE_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch (e) {}
+  // First run → seed
+  const seeded = { words: SEED_WORDS.map(normalizeWord), version: 1 };
+  return seeded;
+}
+
+function saveState() {
+  localStorage.setItem(STORE_KEY, JSON.stringify(state));
+}
+
+function normalizeWord(w) {
+  return {
+    mot: w.mot.trim(),
+    cat: (w.cat || 'autre').trim().toLowerCase(),
+    ctx: (w.ctx || '').trim(),
+    hint: (w.hint || '').trim(),
+    seen: w.seen || 0,
+    correct: w.correct || 0,
+    streak: w.streak || 0   // consecutive correct; ≥3 = mastered
+  };
+}
+
+const MASTERY_THRESHOLD = 3;
+
+// Notation type Anki : à quelle distance (en nombre de mots) le mot revient dans la file.
+// "acquis" → ne revient pas dans cette session.
+const GRADE_STEPS = { again: 1, hard: 4, good: 10 };
+
+// ── Session state ──
+let session = { queue: [], current: null, phase: 'regarder', sCorrect: 0, sTotal: 0, retired: 0 };
+
+function isMastered(w) { return w.streak >= MASTERY_THRESHOLD; }
+
+function buildQueue() {
+  // Round-robin : tous les mots dans la file, mélangés. Les notes gèrent la fréquence de retour.
+  const all = [...state.words];
+  shuffle(all);
+  return all;
+}
+
+function shuffle(a) {
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+}
+
+function resetSession() {
+  session = { queue: buildQueue(), current: null, phase: 'regarder', sCorrect: 0, sTotal: 0, retired: 0 };
+  updateStatsBar();
+  nextWord();
+}
+
+function nextWord() {
+  if (session.queue.length === 0) { renderDone(); return; }
+  session.current = session.queue.shift();
+  session.phase = 'regarder';
+  renderRegarder();
+}
+
+// ════════════════════════════════════════════════════════════════════
+//  RENDER — 4 phases
+// ════════════════════════════════════════════════════════════════════
+
+function catBadge(cat) {
+  const known = ['phonétique','accent','nombre','grammaire','autre'];
+  const c = known.includes(cat) ? cat : 'autre';
+  return `<span class="cat-badge cat-${c}">${cat}</span>`;
+}
+
+function contextHTML(w, reveal) {
+  if (!w.ctx) return '';
+  let html;
+  if (reveal) {
+    html = w.ctx.replace(/\{\{(.+?)\}\}/g, '<span class="blank">$1</span>');
+  } else {
+    html = w.ctx.replace(/\{\{(.+?)\}\}/g, '<span class="blank">' + '_'.repeat(Math.max(3, '$1'.length)) + '____</span>');
+    html = w.ctx.replace(/\{\{(.+?)\}\}/g, (m, p1) => '<span class="blank">' + '·'.repeat(Math.max(4, p1.length)) + '</span>');
+  }
+  return `<div class="context-line">${html}</div>`;
+}
+
+// Highlight the "hot" part of the word if the hint contains UPPERCASE letters
+function wordWithHotspot(w) {
+  // If hint has an explicit form like "quaRANte", highlight the uppercase run inside the word
+  const m = (w.hint || '').match(/[a-zà-ÿ]*[A-ZÀ-Ÿ]{2,}[a-zà-ÿ]*/);
+  if (m) {
+    const pattern = m[0];
+    const upperRun = pattern.match(/[A-ZÀ-Ÿ]{2,}/)[0].toLowerCase();
+    const idx = w.mot.toLowerCase().indexOf(upperRun);
+    if (idx >= 0) {
+      return w.mot.substring(0, idx) +
+        '<span class="hot">' + w.mot.substring(idx, idx + upperRun.length) + '</span>' +
+        w.mot.substring(idx + upperRun.length);
+    }
+  }
+  return w.mot;
+}
+
+function renderRegarder() {
+  const w = session.current;
+  const left = session.queue.length;
+  document.getElementById('card').innerHTML = `
+    <span class="progress-tag">${left} mot${left>1?'s':''} après celui-ci</span>
+    <div class="step-label">① Regarder</div>
+    <div class="cat-center" style="margin-top:14px;">${catBadge(w.cat)}</div>
+    <div class="word-display">${wordWithHotspot(w)}</div>
+    ${w.hint ? `<div class="hint-note">💡 ${escapeHTML(w.hint)}</div>` : ''}
+    ${contextHTML(w, true)}
+    <div class="controls">
+      <button class="btn btn-primary" onclick="goCacher()">Cacher et écrire →</button>
+    </div>`;
+  setTip('👀 Mémorise le mot — surtout la partie en rouge. Quand tu es prêt, cache-le.');
+}
+
+function goCacher() {
+  session.phase = 'ecrire';
+  renderEcrire();
+}
+
+// Full sentence with the word filled in (no {{ }} markers). Falls back to just the word if no context.
+function targetSentence(w) {
+  if (!w.ctx) return w.mot;
+  return w.ctx.replace(/\{\{(.+?)\}\}/g, '$1');
+}
+
+function renderEcrire() {
+  const w = session.current;
+  const hasCtx = !!w.ctx;
+  document.getElementById('card').innerHTML = `
+    <div class="step-label">② Cacher → ③ Écrire ${hasCtx ? 'la phrase complète' : 'le mot'} de mémoire</div>
+    <div style="margin-top:18px;">
+      <textarea class="write-input" id="answerInput" rows="2" autocomplete="off" autocorrect="off"
+             autocapitalize="off" spellcheck="false" placeholder="${hasCtx ? 'Écris toute la phrase ici, de mémoire…' : 'Écris le mot ici…'}"></textarea>
+    </div>
+    <div class="controls">
+      <button class="btn btn-primary" onclick="checkAnswer()">Vérifier ✓</button>
+      <button class="btn btn-ghost" onclick="renderRegarder()">↺ Revoir</button>
+    </div>`;
+  const inp = document.getElementById('answerInput');
+  activeInput = 'answerInput';
+  inp.focus();
+  inp.addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); checkAnswer(); }
+    if (e.key === 'Escape') { e.preventDefault(); renderRegarder(); }
+  });
+  setTip(hasCtx
+    ? '✍️ Écris toute la phrase de mémoire, pas seulement le mot. Entrée = vérifier.'
+    : '✍️ Écris de mémoire. Entrée = vérifier.');
+}
+
+function normalizeCompare(s) {
+  return s.normalize('NFC').trim().replace(/\s+/g, ' ').replace(/['’]/g, "'");
+}
+
+function checkAnswer() {
+  const w = session.current;
+  const ans = document.getElementById('answerInput').value;
+  const target = targetSentence(w);
+  const correct = normalizeCompare(ans) === normalizeCompare(target);
+
+  // Update persistent stats (la note gère la réinsertion, pas ici)
+  w.seen++;
+  session.sTotal++;
+  if (correct) { w.correct++; session.sCorrect++; }
+  saveState();
+  updateStatsBar();
+  renderVerifier(w, ans, correct);
+}
+
+// ── Notation type Anki : décide quand le mot revient ──
+function gradeWord(grade) {
+  const w = session.current;
+  if (grade === 'again')      w.streak = 0;
+  else if (grade === 'good')  w.streak++;
+  else if (grade === 'easy')  w.streak += 2;
+  // 'hard' : on laisse le streak tel quel
+  saveState();
+
+  if (grade === 'easy') {
+    session.retired++;               // sort de la session
+  } else {
+    const step = GRADE_STEPS[grade];
+    const idx = Math.min(session.queue.length, step);
+    session.queue.splice(idx, 0, w); // réinséré plus loin selon la note
+  }
+  document.removeEventListener('keydown', gradeKeyHandler);
+  refreshAll();
+  nextWord();
+}
+
+function gradeKeyHandler(e) {
+  const map = { '1': 'again', '2': 'hard', '3': 'good', '4': 'easy' };
+  if (map[e.key]) { e.preventDefault(); gradeWord(map[e.key]); return; }
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    const def = document.querySelector('.grade-default');
+    if (def) def.click();
+  }
+}
+
+function renderVerifier(w, ans, correct) {
+  session.phase = 'verifier';
+  const target = targetSentence(w);
+  const diff = diffHTML(ans, target);
+  // Bouton par défaut (Entrée) : si faux → Encore ; si juste → Bien.
+  const defGrade = correct ? 'good' : 'again';
+  const gBtn = (grade, emoji, label, sub, key, cls) =>
+    `<button class="btn grade-btn ${cls} ${grade===defGrade?'grade-default':''}" onclick="gradeWord('${grade}')">
+       <span class="g-emoji">${emoji}</span>
+       <span class="g-label">${label}</span>
+       <span class="g-sub">${sub} <span class="g-key">${key}</span></span>
+     </button>`;
+  document.getElementById('card').innerHTML = `
+    <div class="step-label">④ Vérifier — note ta mémoire</div>
+    <div class="verdict ${correct ? 'correct' : 'wrong'}">
+      <div class="icon">${correct ? '✓' : '✗'}</div>
+      <div style="font-weight:600;font-size:16px;margin-top:4px;">
+        ${correct ? 'Orthographe correcte' : 'Pas tout à fait'}
+      </div>
+    </div>
+    <div class="diff-display" style="font-size:22px;line-height:1.7;letter-spacing:normal;text-align:left;">${diff}</div>
+    ${!correct ? `<div class="your-answer">ta réponse : <span class="yb">${escapeHTML(ans) || '∅'}</span></div>` : ''}
+    ${w.hint ? `<div class="hint-note">💡 ${escapeHTML(w.hint)}</div>` : ''}
+    <div class="grade-row">
+      ${gBtn('again', '🔴', 'Encore', 'revient tout de suite', '1', 'g-again')}
+      ${gBtn('hard',  '🟠', 'Difficile', 'revient bientôt', '2', 'g-hard')}
+      ${gBtn('good',  '🟢', 'Bien', 'revient plus tard', '3', 'g-good')}
+      ${gBtn('easy',  '⭐', 'Acquis', 'sort de la session', '4', 'g-easy')}
+    </div>
+    <div class="controls" style="margin-top:8px;">
+      <button class="btn btn-ghost" onclick="renderRegarder()">↺ Revoir le mot d'abord</button>
+    </div>`;
+  const def = document.querySelector('.grade-default');
+  if (def) def.focus();
+  document.addEventListener('keydown', gradeKeyHandler);
+  setTip(correct
+    ? '✓ Bien ! Note à quelle vitesse c\'est revenu : 1 Encore · 2 Difficile · 3 Bien · 4 Acquis (Entrée = Bien).'
+    : '✗ Regarde l\'erreur en rouge. Note honnêtement : 1 Encore (revient vite) est le bon choix ici.');
+}
+
+// Character-level diff (LCS-based) — shows correct word with wrong/missing parts flagged
+function diffHTML(attempt, target) {
+  const a = normalizeCompare(attempt);
+  const t = normalizeCompare(target);
+  // Align via simple LCS
+  const m = a.length, n = t.length;
+  const dp = Array.from({length: m+1}, () => new Array(n+1).fill(0));
+  for (let i=1;i<=m;i++) for (let j=1;j<=n;j++)
+    dp[i][j] = a[i-1]===t[j-1] ? dp[i-1][j-1]+1 : Math.max(dp[i-1][j], dp[i][j-1]);
+  // Backtrack to mark which target chars were matched
+  let i=m, j=n; const matched = new Array(n).fill(false);
+  while (i>0 && j>0) {
+    if (a[i-1]===t[j-1]) { matched[j-1]=true; i--; j--; }
+    else if (dp[i-1][j] >= dp[i][j-1]) i--; else j--;
+  }
+  // Render target chars: matched = ok, unmatched = bad/missing
+  let out = '';
+  for (let k=0;k<n;k++) {
+    const ch = t[k] === ' ' ? '&nbsp;' : escapeHTML(t[k]);
+    out += matched[k] ? `<span class="ok">${ch}</span>` : `<span class="bad">${ch}</span>`;
+  }
+  return out;
+}
+
+function renderDone() {
+  const pct = session.sTotal ? Math.round(100*session.sCorrect/session.sTotal) : 0;
+  document.getElementById('card').innerHTML = `
+    <div class="empty-state">
+      <div class="big">✓ Session terminée — tout est marqué « Acquis »</div>
+      <div style="font-size:32px;font-weight:700;color:#003087;margin:12px 0;">${session.sCorrect} / ${session.sTotal} <span style="font-size:18px;color:#888;">(${pct}% d'orthographe correcte)</span></div>
+      <p style="margin-bottom:6px;">${session.retired} mot${session.retired>1?'s':''} sorti${session.retired>1?'s':''} de la rotation · ${session.sTotal} passage${session.sTotal>1?'s':''} au total</p>
+      <p style="margin-bottom:18px;">Reviens demain : la répétition espacée fait le travail.</p>
+      <div class="controls">
+        <button class="btn btn-primary" onclick="resetSession()">↻ Recommencer</button>
+        <button class="btn btn-secondary" onclick="openManager()">📝 Ajouter des mots</button>
+      </div>
+    </div>`;
+  setTip('🎯 Régularité > intensité. 5 minutes chaque jour battent 1 heure une fois par semaine.');
+}
+
+function renderEmpty() {
+  document.getElementById('card').innerHTML = `
+    <div class="empty-state">
+      <div class="big">Aucun mot dans la banque</div>
+      <p style="margin-bottom:18px;">Ajoute les mots que tu rates dans tes sessions d'écriture.</p>
+      <div class="controls">
+        <button class="btn btn-primary" onclick="openManager()">📝 Ajouter des mots</button>
+      </div>
+    </div>`;
+}
+
+// ════════════════════════════════════════════════════════════════════
+//  Accent bar insertion (into the active input)
+// ════════════════════════════════════════════════════════════════════
+let activeInput = 'answerInput';
+function insertAccent(char) {
+  const ta = document.getElementById(activeInput);
+  if (!ta) return;
+  ta.focus();
+  const s = ta.selectionStart, e = ta.selectionEnd, v = ta.value;
+  ta.value = v.substring(0,s) + char + v.substring(e);
+  ta.selectionStart = ta.selectionEnd = s + char.length;
+}
+
+// ════════════════════════════════════════════════════════════════════
+//  Manager (import / export / list / delete)
+// ════════════════════════════════════════════════════════════════════
+function openManager() { document.getElementById('managerModal').classList.add('active'); renderWordList(); }
+function closeManager() { document.getElementById('managerModal').classList.remove('active'); refreshAll(); }
+
+function importWords() {
+  const raw = document.getElementById('importBox').value;
+  const lines = raw.split('\n').map(l => l.trim()).filter(Boolean);
+  let added = 0;
+  for (const line of lines) {
+    const parts = line.split('|').map(p => p.trim());
+    if (!parts[0]) continue;
+    // skip duplicates (same mot)
+    if (state.words.some(w => normalizeCompare(w.mot) === normalizeCompare(parts[0]))) continue;
+    state.words.push(normalizeWord({ mot: parts[0], cat: parts[1], ctx: parts[2], hint: parts[3] }));
+    added++;
+  }
+  saveState();
+  document.getElementById('importBox').value = '';
+  renderWordList();
+  refreshAll();
+  setTip(`✓ ${added} mot${added>1?'s':''} ajouté${added>1?'s':''} à la banque.`);
+}
+
+function exportWords() {
+  const lines = state.words.map(w => [w.mot, w.cat, w.ctx, w.hint].join(' | '));
+  const blob = new Blob([lines.join('\n')], {type:'text/plain'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'tef-orthographe-banque.txt';
+  a.click();
+}
+
+function clearAllWords() {
+  if (!confirm('Vider TOUTE la banque de mots ? (irréversible)')) return;
+  state.words = [];
+  saveState(); renderWordList(); refreshAll();
+}
+
+function deleteWord(idx) {
+  state.words.splice(idx, 1);
+  saveState(); renderWordList(); refreshAll();
+}
+
+function renderWordList() {
+  const wrap = document.getElementById('wordListWrap');
+  if (state.words.length === 0) { wrap.innerHTML = '<p class="help" style="margin-top:16px;">Banque vide.</p>'; return; }
+  let rows = state.words.map((w, i) => `
+    <tr>
+      <td><strong>${escapeHTML(w.mot)}</strong></td>
+      <td>${catBadge(w.cat)}</td>
+      <td class="mastery">${w.streak>=MASTERY_THRESHOLD ? '✓ maîtrisé' : (w.streak + '/' + MASTERY_THRESHOLD)}</td>
+      <td>${w.correct}/${w.seen}</td>
+      <td class="del" title="Supprimer" onclick="deleteWord(${i})">✕</td>
+    </tr>`).join('');
+  wrap.innerHTML = `
+    <table class="word-table">
+      <thead><tr><th>Mot</th><th>Catégorie</th><th>Série</th><th>Réussite</th><th></th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+}
+
+// ════════════════════════════════════════════════════════════════════
+//  Helpers
+// ════════════════════════════════════════════════════════════════════
+function escapeHTML(s) { return (s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function setTip(t) { document.getElementById('tipBar').textContent = t; }
+
+function updateStatsBar() {
+  document.getElementById('sCorrect').textContent = session.sCorrect;
+  document.getElementById('sTotal').textContent = session.sTotal;
+}
+
+function refreshAll() {
+  document.getElementById('bankCount').textContent = state.words.length;
+  document.getElementById('dueCount').textContent = state.words.filter(w => !isMastered(w)).length;
+  document.getElementById('masteredCount').textContent = state.words.filter(isMastered).length;
+}
+
+// ════════════════════════════════════════════════════════════════════
+//  Sauvegarde / Restauration complète — transfert entre appareils
+//  La banque de mots ET les stats (seen/correct/streak) vivent dans le
+//  localStorage de CE navigateur. Export → .json → import ailleurs.
+// ════════════════════════════════════════════════════════════════════
+
+function backupSave() {
+  const payload = {
+    app: 'tef-ortho',
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    data: state
+  };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'tef-orthographe-save-' + new Date().toISOString().slice(0, 10) + '.json';
+  a.click();
+  URL.revokeObjectURL(a.href);
+  setTip('✓ Sauvegarde téléchargée — ' + state.words.length + ' mot(s) + stats. Transfère ce fichier sur l\'autre appareil, puis « Restaurer ».');
+}
+
+function backupRestore(input) {
+  const file = input.files && input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function () {
+    try {
+      const parsed = JSON.parse(reader.result);
+      // accepte le format enrichi {app, data} ou l'objet brut {words:[...]}
+      const data = (parsed && parsed.app === 'tef-ortho' && parsed.data) ? parsed.data : parsed;
+      if (!data || !Array.isArray(data.words)) throw new Error('format');
+      const incoming = data.words.length;
+      const currentN = state.words.length;
+      if (!confirm('Restaurer ' + incoming + ' mot(s) ?\n\nCela REMPLACE la banque actuelle (' + currentN + ' mot(s)) et ses stats sur cet appareil. Irréversible.')) {
+        input.value = '';
+        return;
+      }
+      state = { words: data.words.map(normalizeWord), version: 1 };
+      saveState();
+      input.value = '';
+      renderWordList();
+      refreshAll();
+      setTip('✓ Sauvegarde restaurée — ' + incoming + ' mot(s) chargé(s).');
+    } catch (e) {
+      input.value = '';
+      alert('✕ Fichier invalide.\n\nUtilise un fichier .json créé par le bouton « ⬇ Sauvegarder tout (.json) » de cet outil.');
+    }
+  };
+  reader.readAsText(file);
+}
+
+// ── Init ──
+function init() {
+  refreshAll();
+  if (state.words.length === 0) { renderEmpty(); return; }
+  resetSession();
+}
+init();
+</script>
+</body>
+</html>

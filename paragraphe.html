@@ -1,0 +1,738 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TEF Canada — Reconstitution de Paragraphe</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    background: #f0f2f5;
+    color: #1a1a1a;
+    min-height: 100vh;
+    padding: 20px;
+  }
+
+  header {
+    background: #003087; color: white; padding: 14px 24px;
+    border-radius: 8px; margin-bottom: 20px;
+    display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;
+  }
+  header h1 { font-size: 18px; font-weight: 600; letter-spacing: 0.5px; }
+  header .subtitle { font-size: 13px; opacity: 0.8; margin-top: 2px; }
+  .session-stats { text-align: right; font-size: 13px; }
+  .session-stats .big { font-size: 24px; font-weight: 700; font-variant-numeric: tabular-nums; }
+
+  /* Accent bar */
+  .accent-bar {
+    background: white; border: 1px solid #ddd; border-radius: 8px;
+    padding: 10px 16px; margin-bottom: 16px; display: flex;
+    align-items: center; gap: 8px; flex-wrap: wrap; box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  }
+  .accent-bar .bar-label {
+    font-size: 12px; color: #666; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.5px; margin-right: 4px; white-space: nowrap;
+  }
+  .accent-bar button {
+    background: #f5f7fa; border: 1px solid #ccc; border-radius: 5px;
+    padding: 5px 10px; font-size: 16px; cursor: pointer; font-family: inherit;
+    transition: background 0.15s, transform 0.1s; min-width: 34px; text-align: center;
+  }
+  .accent-bar button:hover { background: #003087; color: white; border-color: #003087; transform: translateY(-1px); }
+  .accent-bar button:active { transform: translateY(0); }
+  .accent-bar .separator { width: 1px; height: 24px; background: #ddd; margin: 0 4px; }
+
+  .card {
+    background: white; border-radius: 8px; padding: 28px; margin-bottom: 20px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.1); border-left: 4px solid #003087; min-height: 200px;
+  }
+
+  .step-label { font-size: 12px; font-weight: 700; color: #003087; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; }
+  .meta-row { font-size: 12px; color: #888; margin-bottom: 12px; display: flex; gap: 14px; flex-wrap: wrap; }
+  .meta-row strong { color: #003087; }
+
+  .text-display {
+    background: #f8f9fb; border: 1px solid #e0e4ea; border-radius: 6px;
+    padding: 18px 20px; font-size: 16px; line-height: 1.85; color: #222;
+    white-space: pre-wrap; max-height: 420px; overflow-y: auto;
+  }
+
+  /* Line-by-line practice */
+  .pl-line { padding: 5px 10px; border-radius: 4px; margin: 3px 0; line-height: 1.7; }
+  .pl-done   { color: #2e7d32; }
+  .pl-future { color: #555; }
+  .pl-target {
+    background: #fff8e1; border: 1px dashed #e0a800; color: #b58100;
+    font-family: 'Courier New', monospace; letter-spacing: 2px; font-weight: 600;
+  }
+
+  .write-area {
+    width: 100%; border: 2px solid #ccc; border-radius: 8px;
+    padding: 16px 18px; font-size: 15px; line-height: 1.8;
+    font-family: 'Segoe UI', Arial, sans-serif; outline: none;
+    transition: border-color 0.2s; resize: vertical; white-space: pre-wrap;
+  }
+  .write-area:focus { border-color: #003087; box-shadow: 0 0 0 3px rgba(0,48,135,0.1); }
+
+  .diff-display {
+    background: #f8f9fb; border: 1px solid #e0e4ea; border-radius: 6px;
+    padding: 18px 20px; font-size: 16px; line-height: 1.85;
+    white-space: pre-wrap; max-height: 420px; overflow-y: auto;
+  }
+  .diff-display .ok  { color: #2e7d32; }
+  .diff-display .bad { color: #cc0000; background: #fff0f0; text-decoration: underline wavy #cc0000; }
+
+  .score-banner {
+    text-align: center; padding: 18px 0; margin-bottom: 4px;
+  }
+  .score-banner .pct { font-size: 44px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .score-banner .pct.great { color: #2e7d32; }
+  .score-banner .pct.ok { color: #e67e00; }
+  .score-banner .pct.low { color: #cc0000; }
+  .score-banner .sub { font-size: 13px; color: #888; margin-top: 2px; }
+
+  .controls { display: flex; gap: 10px; margin-top: 18px; justify-content: center; flex-wrap: wrap; }
+  .btn { padding: 11px 24px; border-radius: 6px; border: none; font-size: 14px; font-weight: 600; cursor: pointer; transition: background 0.15s; }
+  .btn-primary { background: #003087; color: white; }
+  .btn-primary:hover { background: #00246b; }
+  .btn-secondary { background: #f0f2f5; color: #333; border: 1px solid #ccc; }
+  .btn-secondary:hover { background: #e0e4ea; }
+  .btn-danger { background: #fff0f0; color: #cc0000; border: 1px solid #ffcccc; }
+  .btn-danger:hover { background: #ffe0e0; }
+  .btn-ghost { background: transparent; color: #888; border: 1px solid #ddd; }
+  .btn-ghost:hover { background: #f5f5f5; }
+
+  /* Library */
+  .toolbar { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
+  .lib-item {
+    background: white; border-radius: 8px; padding: 16px 20px; margin-bottom: 10px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08); display: flex; justify-content: space-between;
+    align-items: center; gap: 14px; flex-wrap: wrap;
+  }
+  .lib-item .info { flex: 1; min-width: 200px; }
+  .lib-item .label { font-weight: 600; font-size: 14px; color: #1a1a1a; margin-bottom: 4px; }
+  .lib-item .excerpt { font-size: 12px; color: #888; }
+  .lib-item .stats { font-size: 12px; color: #555; display: flex; gap: 10px; flex-wrap: wrap; margin-top: 6px; }
+  .lib-item .stats .best { color: #2e7d32; font-weight: 600; }
+  .lib-item .actions { display: flex; gap: 6px; flex-wrap: wrap; }
+  .lib-item .del { color: #cc0000; cursor: pointer; font-weight: 700; padding: 6px 10px; }
+
+  .history-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 10px; }
+  .history-table th { text-align: left; color: #888; font-weight: 600; padding: 4px 6px; border-bottom: 1px solid #eee; font-size: 10px; text-transform: uppercase; }
+  .history-table td { padding: 4px 6px; border-bottom: 1px solid #f5f5f5; }
+
+  .empty-state { text-align: center; padding: 50px 20px; color: #888; }
+  .empty-state .big { font-size: 18px; color: #555; margin-bottom: 8px; }
+
+  /* Modal */
+  .modal-overlay {
+    display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+    z-index: 100; justify-content: center; align-items: center; padding: 20px;
+  }
+  .modal-overlay.active { display: flex; }
+  .modal { background: white; border-radius: 10px; padding: 28px; max-width: 640px; width: 100%; max-height: 88vh; overflow-y: auto; }
+  .modal h2 { font-size: 20px; margin-bottom: 6px; color: #003087; }
+  .modal p.help { color: #666; margin-bottom: 14px; line-height: 1.6; font-size: 14px; }
+  .modal label { font-size: 12px; font-weight: 600; color: #555; display: block; margin-bottom: 4px; margin-top: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .modal input[type=text] {
+    width: 100%; border: 1px solid #ccc; border-radius: 6px; padding: 10px 12px; font-size: 14px; outline: none;
+  }
+  .modal input[type=text]:focus { border-color: #003087; }
+  .modal textarea {
+    width: 100%; border: 1px solid #ccc; border-radius: 6px; padding: 12px; font-size: 14px;
+    line-height: 1.6; resize: vertical; outline: none; min-height: 160px; font-family: 'Segoe UI', Arial, sans-serif;
+  }
+  .modal textarea:focus { border-color: #003087; }
+  .modal-actions { display: flex; gap: 10px; margin-top: 18px; justify-content: flex-end; flex-wrap: wrap; }
+
+  .status-bar {
+    background: #003087; color: white; border-radius: 8px; padding: 12px 20px;
+    display: flex; justify-content: space-between; align-items: center; font-size: 13px; margin-top: 4px; flex-wrap: wrap; gap: 8px;
+  }
+  .status-bar .tip { opacity: 0.85; font-style: italic; }
+  .status-bar .shortcut-hint { opacity: 0.7; font-size: 12px; }
+
+  /* Missed-words recap (end of exercise) */
+  .missed-box {
+    background: #fff8e1; border: 1px solid #f0d28a; border-radius: 8px;
+    padding: 16px 20px; margin-top: 16px;
+  }
+  .missed-box.ok-box { background: #eef7ee; border-color: #bfe3bf; color: #2e7d32; text-align: center; font-weight: 600; }
+  .missed-title { font-size: 12px; font-weight: 700; color: #b58100; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .missed-list { list-style: none; padding: 0; margin: 0; max-height: 220px; overflow-y: auto; }
+  .missed-list li { padding: 6px 2px; border-bottom: 1px dashed #e8dca8; font-size: 14px; }
+  .missed-list li:last-child { border-bottom: none; }
+  .missed-list .missed-ctx { color: #888; font-size: 12px; }
+
+  @media (max-width: 600px) {
+    .accent-bar { gap: 5px; }
+    .accent-bar button { padding: 5px 7px; font-size: 15px; min-width: 30px; }
+    .lib-item { flex-direction: column; align-items: flex-start; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <div class="subtitle">Reconstitution de texte — TEF Canada</div>
+    <h1>Regarder · Cacher · Écrire · Vérifier — paragraphe entier</h1>
+  </div>
+  <div class="session-stats">
+    <div class="big" id="hScore">—</div>
+    <div>dernier score</div>
+  </div>
+</header>
+
+<!-- Accent Bar -->
+<div class="accent-bar">
+  <span class="bar-label">Accents</span>
+  <button onclick="insertAccent('é')">é</button>
+  <button onclick="insertAccent('è')">è</button>
+  <button onclick="insertAccent('ê')">ê</button>
+  <button onclick="insertAccent('ë')">ë</button>
+  <div class="separator"></div>
+  <button onclick="insertAccent('à')">à</button>
+  <button onclick="insertAccent('â')">â</button>
+  <div class="separator"></div>
+  <button onclick="insertAccent('ù')">ù</button>
+  <button onclick="insertAccent('û')">û</button>
+  <div class="separator"></div>
+  <button onclick="insertAccent('ô')">ô</button>
+  <div class="separator"></div>
+  <button onclick="insertAccent('î')">î</button>
+  <button onclick="insertAccent('ï')">ï</button>
+  <div class="separator"></div>
+  <button onclick="insertAccent('ç')">ç</button>
+  <button onclick="insertAccent('œ')">œ</button>
+  <button onclick="insertAccent('æ')">æ</button>
+  <div class="separator"></div>
+  <button onclick="insertAccent('É')">É</button>
+  <button onclick="insertAccent('È')">È</button>
+  <button onclick="insertAccent('Ê')">Ê</button>
+  <button onclick="insertAccent('À')">À</button>
+  <button onclick="insertAccent('Ç')">Ç</button>
+  <div class="separator"></div>
+  <button onclick="insertAccent('« ')">«</button>
+  <button onclick="insertAccent(' »')">»</button>
+</div>
+
+<!-- Toolbar (library view only) -->
+<div class="toolbar" id="libToolbar">
+  <span style="font-size:13px;color:#555;"><strong id="libCount">0</strong> texte(s) sauvegardé(s)</span>
+  <button class="btn btn-primary" onclick="openAddModal()">➕ Nouveau texte (coller un corrigé)</button>
+  <button class="btn btn-secondary" onclick="backupSave()" title="Télécharge toute ta bibliothèque dans un fichier .json (pour la transférer sur un autre appareil)">⬇ Sauvegarder (.json)</button>
+  <button class="btn btn-secondary" onclick="document.getElementById('restoreFile').click()" title="Recharge une sauvegarde .json — remplace la bibliothèque actuelle">⬆ Restaurer (.json)</button>
+  <input type="file" id="restoreFile" accept="application/json,.json" style="display:none" onchange="backupRestore(this)">
+</div>
+
+<!-- Main card (library list OR practice phases) -->
+<div id="main"></div>
+
+<!-- Status bar -->
+<div class="status-bar">
+  <div class="tip" id="tipBar">💡 Colle le modèle corrigé d'une session d'écriture, puis reconstitue-le de mémoire.</div>
+  <div class="shortcut-hint"><strong>Échap</strong> = revoir le texte</div>
+</div>
+
+<!-- Add modal -->
+<div class="modal-overlay" id="addModal">
+  <div class="modal">
+    <h2>➕ Nouveau texte à reconstituer</h2>
+    <p class="help">Colle le « modèle corrigé » d'une session (ex: depuis <code>01 Writing Practice/Part A/...</code>). Donne-lui un nom court pour le retrouver — sujet + date par exemple.</p>
+    <label>Nom (optionnel — auto-généré sinon)</label>
+    <input type="text" id="addLabel" placeholder="ex : Avalanche Mont-Blanc — 2026-06-20">
+    <label>Texte à mémoriser</label>
+    <textarea id="addText" placeholder="Colle ici le paragraphe-modèle…"></textarea>
+    <div class="modal-actions">
+      <button class="btn btn-primary" onclick="saveNewText(true)">💾 Sauvegarder et pratiquer →</button>
+      <button class="btn btn-secondary" onclick="saveNewText(false)">💾 Sauvegarder seulement</button>
+      <button class="btn btn-ghost" onclick="closeAddModal()">Annuler</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ════════════════════════════════════════════════════════════════════
+   RECONSTITUTION DE PARAGRAPHE — TEF Canada
+   Méthode : Regarder → Cacher → Écrire (tout le texte) → Vérifier
+   Persistance : localStorage (clé: tef-paragraphe-v1)
+   ════════════════════════════════════════════════════════════════════ */
+
+const STORE_KEY = 'tef-paragraphe-v1';
+let lib = loadLib();
+let activeInput = null;
+let current = null; // { id, phase, peeks }
+
+function loadLib() {
+  try {
+    const raw = localStorage.getItem(STORE_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch (e) {}
+  return { texts: [] };
+}
+function saveLib() { localStorage.setItem(STORE_KEY, JSON.stringify(lib)); }
+
+function uid() { return 't' + Date.now() + Math.floor(Math.random()*1000); }
+
+function wordCount(s) { return s.trim() === '' ? 0 : s.trim().split(/\s+/).length; }
+
+// ════════════════════════════════════════════════════════════════════
+//  Library view
+// ════════════════════════════════════════════════════════════════════
+
+function renderLibrary() {
+  document.getElementById('libToolbar').style.display = 'flex';
+  document.getElementById('libCount').textContent = lib.texts.length;
+  const main = document.getElementById('main');
+
+  if (lib.texts.length === 0) {
+    main.innerHTML = `
+      <div class="card">
+        <div class="empty-state">
+          <div class="big">Aucun texte encore</div>
+          <p style="margin-bottom:18px;">Ajoute le modèle corrigé d'une de tes sessions d'écriture pour commencer.</p>
+          <div class="controls"><button class="btn btn-primary" onclick="openAddModal()">➕ Ajouter un texte</button></div>
+        </div>
+      </div>`;
+    return;
+  }
+
+  // newest first
+  const sorted = [...lib.texts].sort((a,b) => b.createdAt - a.createdAt);
+  main.innerHTML = sorted.map(t => {
+    const attempts = t.attempts || [];
+    const best = attempts.length ? Math.max(...attempts.map(a => a.score)) : null;
+    const last = attempts.length ? attempts[attempts.length-1] : null;
+    const histRows = attempts.slice(-5).reverse().map(a =>
+      `<tr><td>${a.date}</td><td>${a.score}%</td><td>${a.peeks} relecture${a.peeks>1?'s':''}</td></tr>`
+    ).join('');
+    return `
+      <div class="lib-item">
+        <div class="info">
+          <div class="label">${escapeHTML(t.label)}</div>
+          <div class="excerpt">${escapeHTML(t.text.slice(0,90))}${t.text.length>90?'…':''}</div>
+          <div class="stats">
+            <span>${wordCount(t.text)} mots</span>
+            <span>${attempts.length} tentative${attempts.length!==1?'s':''}</span>
+            ${best!==null ? `<span class="best">meilleur : ${best}%</span>` : ''}
+            ${last ? `<span>dernier : ${last.score}%</span>` : ''}
+          </div>
+          ${attempts.length ? `<details style="margin-top:8px;"><summary style="font-size:12px;color:#003087;cursor:pointer;">Historique</summary>
+            <table class="history-table"><thead><tr><th>Date</th><th>Score</th><th>Relectures</th></tr></thead>
+            <tbody>${histRows}</tbody></table></details>` : ''}
+        </div>
+        <div class="actions">
+          <button class="btn btn-primary" onclick="startPractice('${t.id}')">▶ Pratiquer</button>
+          <span class="del" title="Supprimer" onclick="deleteText('${t.id}')">✕</span>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function deleteText(id) {
+  if (!confirm('Supprimer ce texte et son historique ?')) return;
+  lib.texts = lib.texts.filter(t => t.id !== id);
+  saveLib();
+  renderLibrary();
+}
+
+// ════════════════════════════════════════════════════════════════════
+//  Add modal
+// ════════════════════════════════════════════════════════════════════
+
+function openAddModal() {
+  document.getElementById('addLabel').value = '';
+  document.getElementById('addText').value = '';
+  document.getElementById('addModal').classList.add('active');
+  setTimeout(() => document.getElementById('addText').focus(), 50);
+}
+function closeAddModal() { document.getElementById('addModal').classList.remove('active'); }
+
+function saveNewText(practiceNow) {
+  const text = document.getElementById('addText').value.trim();
+  if (!text) { alert('Colle un texte avant de sauvegarder.'); return; }
+  let label = document.getElementById('addLabel').value.trim();
+  if (!label) {
+    const today = new Date().toISOString().slice(0,10);
+    label = text.slice(0,40).replace(/\s+/g,' ') + '… — ' + today;
+  }
+  const t = { id: uid(), label, text, createdAt: Date.now(), attempts: [] };
+  lib.texts.push(t);
+  saveLib();
+  closeAddModal();
+  if (practiceNow) { startPractice(t.id); } else { renderLibrary(); }
+}
+
+// ════════════════════════════════════════════════════════════════════
+//  Practice flow
+// ════════════════════════════════════════════════════════════════════
+
+function buildUnits(text) {
+  // Split into sentence-ish "lines": on . ! ? … and newlines. Trims, drops empties.
+  const units = [];
+  const re = /[^.!?…\n]+[.!?…]*["”»]?|\n+/g;
+  let m;
+  while ((m = re.exec(text))) {
+    const s = m[0].trim();
+    if (s.length) units.push(s);
+  }
+  return units.length ? units : [text.trim()];
+}
+
+function startPractice(id) {
+  const t = lib.texts.find(x => x.id === id);
+  if (!t) return;
+  current = { id, peeks: 0, lineIndex: 0, results: [], units: buildUnits(t.text) };
+  document.getElementById('libToolbar').style.display = 'none';
+  renderRegarder();
+}
+
+function exitPractice() {
+  current = null;
+  renderLibrary();
+}
+
+function getCurrentText() {
+  return lib.texts.find(x => x.id === current.id);
+}
+
+// ── Helpers de comparaison (mot par mot) ──
+function normalizeToken(s) { return s.replace(/['’]/g, "'"); }
+function tokenize(text) { return text.match(/\s+|\S+/g) || []; }
+function cleanWord(s) {
+  return s.replace(/^[«"'“”‘’(\[]+/, '').replace(/[»"'“”‘’)\].,;:!?…]+$/, '').trim();
+}
+function lcsMatched(aWords, tWords) {
+  const m = aWords.length, n = tWords.length;
+  const dp = Array.from({length: m+1}, () => new Array(n+1).fill(0));
+  for (let i=1;i<=m;i++) for (let j=1;j<=n;j++)
+    dp[i][j] = aWords[i-1]===tWords[j-1] ? dp[i-1][j-1]+1 : Math.max(dp[i-1][j], dp[i][j-1]);
+  let i=m, j=n; const matched = new Array(n).fill(false);
+  while (i>0 && j>0) {
+    if (aWords[i-1]===tWords[j-1]) { matched[j-1]=true; i--; j--; }
+    else if (dp[i-1][j] >= dp[i][j-1]) i--; else j--;
+  }
+  return matched;
+}
+
+// ① REGARDER — lecture d'ensemble
+function renderRegarder() {
+  const t = getCurrentText();
+  const main = document.getElementById('main');
+  main.innerHTML = `
+    <div class="card">
+      <div class="step-label">① Regarder — lecture d'ensemble</div>
+      <div class="meta-row">
+        <span><strong>${escapeHTML(t.label)}</strong></span>
+        <span>${wordCount(t.text)} mots · ${current.units.length} ligne${current.units.length>1?'s':''}</span>
+      </div>
+      <div class="text-display">${escapeHTML(t.text)}</div>
+      <div class="controls">
+        <button class="btn btn-primary" onclick="renderLine()">Commencer ligne par ligne →</button>
+        <button class="btn btn-ghost" onclick="exitPractice()">← Bibliothèque</button>
+      </div>
+    </div>`;
+  setTip('👀 Lis le texte en entier 1-2 fois. Ensuite tu reconstitues UNE ligne à la fois ; les autres restent visibles comme contexte.');
+}
+
+// ②③ Une ligne cachée à la fois, le reste visible
+function renderLine() {
+  const t = getCurrentText();
+  const units = current.units;
+  const idx = current.lineIndex;
+  const linesHTML = units.map((u, i) => {
+    if (i === idx) {
+      const len = Math.max(6, Math.min(50, u.replace(/\s/g,'').length));
+      return `<div class="pl-line pl-target">▢ ${'·'.repeat(len)}</div>`;
+    }
+    const cls = i < idx ? 'pl-done' : 'pl-future';
+    return `<div class="pl-line ${cls}">${escapeHTML(u)}</div>`;
+  }).join('');
+  const main = document.getElementById('main');
+  main.innerHTML = `
+    <div class="card">
+      <div class="step-label">②③ Écrire — ligne ${idx+1} / ${units.length}</div>
+      <div class="meta-row"><span><strong>${escapeHTML(t.label)}</strong></span><span>La ligne ▢ est cachée</span></div>
+      <div class="text-display">${linesHTML}</div>
+      <textarea class="write-area" id="lineInput" rows="2" autocomplete="off" autocorrect="off"
+        autocapitalize="off" spellcheck="false" placeholder="Écris la ligne cachée (▢) de mémoire…"></textarea>
+      <div class="controls">
+        <button class="btn btn-primary" onclick="checkLine()">Vérifier ✓</button>
+        <button class="btn btn-ghost" onclick="peekText()">👀 Revoir tout</button>
+        <button class="btn btn-ghost" onclick="exitPractice()">← Bibliothèque</button>
+      </div>
+    </div>`;
+  const inp = document.getElementById('lineInput');
+  activeInput = 'lineInput';
+  inp.focus();
+  inp.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); checkLine(); }
+    if (e.key === 'Escape') { e.preventDefault(); peekText(); }
+  });
+  setTip('✍️ La ligne cachée est marquée ▢. Écris-la de mémoire — les autres lignes t\'aident comme contexte. Entrée = vérifier.');
+}
+
+// Relecture complète (compteur de peeks)
+function peekText() {
+  current.peeks++;
+  const t = getCurrentText();
+  const main = document.getElementById('main');
+  main.innerHTML = `
+    <div class="card">
+      <div class="step-label">👀 Relecture n°${current.peeks}</div>
+      <div class="text-display">${escapeHTML(t.text)}</div>
+      <div class="controls">
+        <button class="btn btn-primary" onclick="renderLine()">Reprendre →</button>
+      </div>
+    </div>`;
+  setTip('Relis, puis reprends. Le nombre de relectures est suivi — l\'objectif est d\'en avoir de moins en moins.');
+}
+
+// ④ Vérifier la ligne
+function checkLine() {
+  const units = current.units;
+  const idx = current.lineIndex;
+  const target = units[idx];
+  const ans = document.getElementById('lineInput').value;
+
+  const targetTokens = tokenize(target);
+  const targetWords = targetTokens.filter(tok => !/^\s+$/.test(tok)).map(normalizeToken);
+  const attemptWords = tokenize(ans).filter(tok => !/^\s+$/.test(tok)).map(normalizeToken);
+  const matched = lcsMatched(attemptWords, targetWords);
+  const matchedCount = matched.filter(Boolean).length;
+
+  const missed = [];
+  targetWords.forEach((w, i) => {
+    if (!matched[i]) {
+      const clean = cleanWord(w);
+      if (clean) missed.push(clean);
+    }
+  });
+  current.results[idx] = { matched: matchedCount, total: targetWords.length, missed, line: target };
+
+  let wIdx = 0;
+  const diff = targetTokens.map(tok => {
+    if (/^\s+$/.test(tok)) return escapeHTML(tok);
+    const ok = matched[wIdx]; wIdx++;
+    return `<span class="${ok ? 'ok' : 'bad'}">${escapeHTML(tok)}</span>`;
+  }).join('');
+
+  renderLineResult(diff, matchedCount, targetWords.length);
+}
+
+function renderLineResult(diff, matchedCount, total) {
+  const units = current.units;
+  const idx = current.lineIndex;
+  const score = total ? Math.round(100 * matchedCount / total) : 100;
+  const last = idx === units.length - 1;
+  const cls = score >= 90 ? 'great' : score >= 70 ? 'ok' : 'low';
+  const main = document.getElementById('main');
+  main.innerHTML = `
+    <div class="card">
+      <div class="step-label">④ Vérifier — ligne ${idx+1} / ${units.length}</div>
+      <div class="score-banner">
+        <div class="pct ${cls}">${score}%</div>
+        <div class="sub">${matchedCount} / ${total} mots retrouvés sur cette ligne</div>
+      </div>
+      <div class="diff-display">${diff}</div>
+      <div class="controls">
+        <button class="btn btn-primary" onclick="nextLine()">${last ? 'Voir le résultat →' : 'Ligne suivante →'}</button>
+        <button class="btn btn-secondary" onclick="renderLine()">↺ Refaire cette ligne</button>
+      </div>
+    </div>`;
+  document.addEventListener('keydown', lineEnterOnce);
+  setTip(score >= 90 ? '✓ Très bien. Continue.' : '✗ Repère les mots en rouge avant de passer à la suite.');
+}
+
+function lineEnterOnce(e) {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    document.removeEventListener('keydown', lineEnterOnce);
+    const b = document.querySelector('.controls .btn-primary');
+    if (b) b.click();
+  }
+}
+
+function nextLine() {
+  document.removeEventListener('keydown', lineEnterOnce);
+  if (current.lineIndex < current.units.length - 1) {
+    current.lineIndex++;
+    renderLine();
+  } else {
+    renderSummary();
+  }
+}
+
+function collectMissedWords() {
+  const seen = new Map(); // key: mot en minuscule -> { word, line }
+  current.results.forEach(r => {
+    if (!r || !r.missed) return;
+    r.missed.forEach(w => {
+      const key = w.toLowerCase();
+      if (!seen.has(key)) seen.set(key, { word: w, line: r.line });
+    });
+  });
+  return Array.from(seen.values());
+}
+
+function renderSummary() {
+  const t = getCurrentText();
+  const totalMatched = current.results.reduce((s, r) => s + (r ? r.matched : 0), 0);
+  const totalWords   = current.results.reduce((s, r) => s + (r ? r.total : 0), 0);
+  const score = totalWords ? Math.round(100 * totalMatched / totalWords) : 0;
+  const cls = score >= 90 ? 'great' : score >= 70 ? 'ok' : 'low';
+
+  const today = new Date().toISOString().slice(0,10);
+  t.attempts = t.attempts || [];
+  t.attempts.push({ date: today, score, peeks: current.peeks });
+  saveLib();
+  document.getElementById('hScore').textContent = score + '%';
+
+  current.missedWords = collectMissedWords();
+  current.label = t.label;
+  const missedHTML = current.missedWords.length ? `
+    <div class="missed-box">
+      <div class="missed-title">📌 Mots/expressions encore fragiles (${current.missedWords.length})</div>
+      <ul class="missed-list">
+        ${current.missedWords.map(m => `<li><strong>${escapeHTML(m.word)}</strong> <span class="missed-ctx">— ${escapeHTML(m.line)}</span></li>`).join('')}
+      </ul>
+      <div class="controls" style="margin-top:10px;">
+        <button class="btn btn-secondary" onclick="copyMissedList()">📋 Copier la liste</button>
+        <button class="btn btn-secondary" onclick="downloadMissedList()">⬇ Télécharger .txt</button>
+      </div>
+    </div>` : `<div class="missed-box ok-box">✓ Aucun mot manqué — tout est solide sur ce texte.</div>`;
+
+  const main = document.getElementById('main');
+  main.innerHTML = `
+    <div class="card">
+      <div class="step-label">✓ Texte terminé</div>
+      <div class="score-banner">
+        <div class="pct ${cls}">${score}%</div>
+        <div class="sub">${totalMatched} / ${totalWords} mots · ${current.peeks} relecture${current.peeks!==1?'s':''} · ${current.units.length} lignes</div>
+      </div>
+      <div class="text-display">${escapeHTML(t.text)}</div>
+      ${missedHTML}
+      <div class="controls">
+        <button class="btn btn-primary" onclick="startPractice('${t.id}')">↻ Refaire ce texte</button>
+        <button class="btn btn-ghost" onclick="exitPractice()">✓ Bibliothèque</button>
+      </div>
+    </div>`;
+  setTip(current.missedWords.length
+    ? '📌 Copie la liste de mots fragiles et colle-la dans le chat avec Claude pour l\'ajouter au trainer orthographe.'
+    : '✓ Excellente mémorisation. Reviens sur ce texte dans 2-3 jours pour l\'ancrer durablement.');
+}
+
+// ── Recap des mots manqués : copier / télécharger ──
+function copyMissedList() {
+  const list = (current && current.missedWords) || [];
+  if (!list.length) return;
+  const text = list.map(m => `${m.word} | ${m.line}`).join('\n');
+  const done = () => setTip('📋 Liste copiée — colle-la dans le chat avec Claude : "Voici les mots ratés de cette session : ..."');
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(done).catch(() => alert('Copie impossible automatiquement. Voici la liste :\n\n' + text));
+  } else {
+    alert('Voici la liste à copier :\n\n' + text);
+  }
+}
+
+function downloadMissedList() {
+  const list = (current && current.missedWords) || [];
+  if (!list.length) return;
+  const text = list.map(m => `${m.word} | ${m.line}`).join('\n');
+  const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const today = new Date().toISOString().slice(0,10);
+  const safeLabel = (current.label || 'texte').replace(/[\\/:*?"<>|]/g, '').slice(0,40);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `mots-a-revoir — ${safeLabel} — ${today}.txt`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+// ════════════════════════════════════════════════════════════════════
+//  Accent bar
+// ════════════════════════════════════════════════════════════════════
+function insertAccent(char) {
+  const ta = document.getElementById(activeInput);
+  if (!ta) return;
+  ta.focus();
+  const s = ta.selectionStart, e = ta.selectionEnd, v = ta.value;
+  ta.value = v.substring(0,s) + char + v.substring(e);
+  ta.selectionStart = ta.selectionEnd = s + char.length;
+}
+
+// ════════════════════════════════════════════════════════════════════
+//  Helpers
+// ════════════════════════════════════════════════════════════════════
+function escapeHTML(s) { return (s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function setTip(t) { document.getElementById('tipBar').textContent = t; }
+
+// ════════════════════════════════════════════════════════════════════
+//  Sauvegarde / Restauration complète — transfert entre appareils
+//  Les données vivent dans le localStorage du navigateur : elles ne suivent
+//  PAS d'un appareil à l'autre. Export → fichier .json → import ailleurs.
+// ════════════════════════════════════════════════════════════════════
+
+function backupSave() {
+  const payload = {
+    app: 'tef-paragraphe',
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    data: lib
+  };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'tef-paragraphe-save-' + new Date().toISOString().slice(0, 10) + '.json';
+  a.click();
+  URL.revokeObjectURL(a.href);
+  setTip('✓ Sauvegarde téléchargée — ' + lib.texts.length + ' texte(s). Transfère ce fichier sur l\'autre appareil, puis « Restaurer ».');
+}
+
+function backupRestore(input) {
+  const file = input.files && input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function () {
+    try {
+      const parsed = JSON.parse(reader.result);
+      // accepte le format enrichi {app, data} ou l'objet brut {texts:[...]}
+      const data = (parsed && parsed.app === 'tef-paragraphe' && parsed.data) ? parsed.data : parsed;
+      if (!data || !Array.isArray(data.texts)) throw new Error('format');
+      const incoming = data.texts.length;
+      const currentN = lib.texts.length;
+      if (!confirm('Restaurer ' + incoming + ' texte(s) ?\n\nCela REMPLACE la bibliothèque actuelle (' + currentN + ' texte(s)) sur cet appareil. Irréversible.')) {
+        input.value = '';
+        return;
+      }
+      lib = data;
+      saveLib();
+      input.value = '';
+      init();
+      setTip('✓ Sauvegarde restaurée — ' + incoming + ' texte(s) chargé(s).');
+    } catch (e) {
+      input.value = '';
+      alert('✕ Fichier invalide.\n\nUtilise un fichier .json créé par le bouton « ⬇ Sauvegarder (.json) » de cet outil.');
+    }
+  };
+  reader.readAsText(file);
+}
+
+// ── Init ──
+function init() {
+  const allAttempts = lib.texts.flatMap(t => t.attempts || []);
+  if (allAttempts.length) {
+    document.getElementById('hScore').textContent = allAttempts[allAttempts.length-1].score + '%';
+  }
+  renderLibrary();
+}
+init();
+</script>
+</body>
+</html>
