@@ -66,7 +66,18 @@
   .pl-target {
     background: #fff8e1; border: 1px dashed #e0a800; color: #b58100;
     font-family: 'Courier New', monospace; letter-spacing: 2px; font-weight: 600;
+    cursor: help; transition: background 0.15s, color 0.15s;
   }
+  /* Roue d'entraînement : survoler (ou toucher sur mobile) dévoile la ligne cachée.
+     Chaque ligne dévoilée est comptée — voir noteGlance(). */
+  .pl-target .pl-reveal { display: none; }
+  .pl-target.revealed {
+    background: #fffdf5; border-style: solid; color: #7a5c00;
+    font-family: 'Segoe UI', Arial, sans-serif; letter-spacing: normal; font-weight: 500;
+  }
+  .pl-target.revealed .pl-dots { display: none; }
+  .pl-target.revealed .pl-reveal { display: inline; }
+  .pl-target.glanced { border-color: #c98a00; }
 
   .write-area {
     width: 100%; border: 2px solid #ccc; border-radius: 8px;
@@ -307,7 +318,7 @@ function renderLibrary() {
     const best = attempts.length ? Math.max(...attempts.map(a => a.score)) : null;
     const last = attempts.length ? attempts[attempts.length-1] : null;
     const histRows = attempts.slice(-5).reverse().map(a =>
-      `<tr><td>${a.date}</td><td>${a.score}%</td><td>${a.peeks} relecture${a.peeks>1?'s':''}</td></tr>`
+      `<tr><td>${a.date}</td><td>${a.score}%</td><td>${a.peeks}</td><td>${a.glances == null ? '—' : a.glances}</td></tr>`
     ).join('');
     return `
       <div class="lib-item">
@@ -321,7 +332,7 @@ function renderLibrary() {
             ${last ? `<span>dernier : ${last.score}%</span>` : ''}
           </div>
           ${attempts.length ? `<details style="margin-top:8px;"><summary style="font-size:12px;color:#003087;cursor:pointer;">Historique</summary>
-            <table class="history-table"><thead><tr><th>Date</th><th>Score</th><th>Relectures</th></tr></thead>
+            <table class="history-table"><thead><tr><th>Date</th><th>Score</th><th>Relect.</th><th>Dévoilées</th></tr></thead>
             <tbody>${histRows}</tbody></table></details>` : ''}
         </div>
         <div class="actions">
@@ -385,7 +396,7 @@ function buildUnits(text) {
 function startPractice(id) {
   const t = lib.texts.find(x => x.id === id);
   if (!t) return;
-  current = { id, peeks: 0, lineIndex: 0, results: [], units: buildUnits(t.text) };
+  current = { id, peeks: 0, lineIndex: 0, results: [], units: buildUnits(t.text), glanceLines: [] };
   document.getElementById('libToolbar').style.display = 'none';
   renderRegarder();
 }
@@ -446,7 +457,8 @@ function renderLine() {
   const linesHTML = units.map((u, i) => {
     if (i === idx) {
       const len = Math.max(6, Math.min(50, u.replace(/\s/g,'').length));
-      return `<div class="pl-line pl-target">▢ ${'·'.repeat(len)}</div>`;
+      const glanced = (current.glanceLines || []).indexOf(i) !== -1 ? ' glanced' : '';
+      return `<div class="pl-line pl-target${glanced}" id="plTarget" title="Survole pour dévoiler (compté comme aide)">▢ <span class="pl-dots">${'·'.repeat(len)}</span><span class="pl-reveal">${escapeHTML(u)}</span></div>`;
     }
     const cls = i < idx ? 'pl-done' : 'pl-future';
     return `<div class="pl-line ${cls}">${escapeHTML(u)}</div>`;
@@ -465,6 +477,22 @@ function renderLine() {
         <button class="btn btn-ghost" onclick="exitPractice()">← Bibliothèque</button>
       </div>
     </div>`;
+  // ── Roue d'entraînement : dévoiler la ligne cachée au survol (ou au tap sur mobile) ──
+  const tgt = document.getElementById('plTarget');
+  if (tgt) {
+    const canHover = !window.matchMedia || window.matchMedia('(hover: hover)').matches;
+    if (canHover) {
+      tgt.addEventListener('mouseenter', () => { tgt.classList.add('revealed'); noteGlance(); });
+      tgt.addEventListener('mouseleave', () => tgt.classList.remove('revealed'));
+    } else {
+      // pas de survol possible (écran tactile) → le tap bascule l'affichage
+      tgt.addEventListener('click', () => {
+        tgt.classList.toggle('revealed');
+        if (tgt.classList.contains('revealed')) noteGlance();
+      });
+    }
+  }
+
   const inp = document.getElementById('lineInput');
   activeInput = 'lineInput';
   inp.focus();
@@ -472,7 +500,20 @@ function renderLine() {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); checkLine(); }
     if (e.key === 'Escape') { e.preventDefault(); peekText(); }
   });
-  setTip('✍️ La ligne cachée est marquée ▢. Écris-la de mémoire — les autres lignes t\'aident comme contexte. Entrée = vérifier.');
+  setTip('✍️ La ligne cachée est marquée ▢. Écris-la de mémoire — les autres lignes t\'aident comme contexte. Bloqué ? survole la ligne ▢ pour la dévoiler (compté). Entrée = vérifier.');
+}
+
+// Ligne dévoilée au survol — on compte UNE aide par ligne (pas par survol),
+// séparément des relectures complètes, pour que les deux métriques restent honnêtes.
+function noteGlance() {
+  if (!current) return;
+  if (!current.glanceLines) current.glanceLines = [];
+  if (current.glanceLines.indexOf(current.lineIndex) !== -1) return; // déjà comptée
+  current.glanceLines.push(current.lineIndex);
+  const tgt = document.getElementById('plTarget');
+  if (tgt) tgt.classList.add('glanced');
+  const n = current.glanceLines.length;
+  setTip('👁 Ligne dévoilée — ' + n + ' ligne' + (n > 1 ? 's' : '') + ' dévoilée' + (n > 1 ? 's' : '') + ' sur ce texte. Normal au début : l\'objectif est de voir ce nombre baisser d\'une fois sur l\'autre.');
 }
 
 // Relecture complète (compteur de peeks)
@@ -587,7 +628,8 @@ function renderSummary() {
 
   const today = new Date().toISOString().slice(0,10);
   t.attempts = t.attempts || [];
-  t.attempts.push({ date: today, score, peeks: current.peeks });
+  const glances = (current.glanceLines || []).length;
+  t.attempts.push({ date: today, score, peeks: current.peeks, glances });
   saveLib();
   document.getElementById('hScore').textContent = score + '%';
 
@@ -611,7 +653,7 @@ function renderSummary() {
       <div class="step-label">✓ Texte terminé</div>
       <div class="score-banner">
         <div class="pct ${cls}">${score}%</div>
-        <div class="sub">${totalMatched} / ${totalWords} mots · ${current.peeks} relecture${current.peeks!==1?'s':''} · ${current.units.length} lignes</div>
+        <div class="sub">${totalMatched} / ${totalWords} mots · ${current.peeks} relecture${current.peeks!==1?'s':''} · ${glances} ligne${glances!==1?'s':''} dévoilée${glances!==1?'s':''} · ${current.units.length} lignes</div>
       </div>
       <div class="text-display">${escapeHTML(t.text)}</div>
       ${missedHTML}
