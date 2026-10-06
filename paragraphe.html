@@ -147,10 +147,14 @@
   .modal h2 { font-size: 20px; margin-bottom: 6px; color: #003087; }
   .modal p.help { color: #666; margin-bottom: 14px; line-height: 1.6; font-size: 14px; }
   .modal label { font-size: 12px; font-weight: 600; color: #555; display: block; margin-bottom: 4px; margin-top: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
-  .modal input[type=text] {
+  .modal input[type=text], .modal input[type=password] {
     width: 100%; border: 1px solid #ccc; border-radius: 6px; padding: 10px 12px; font-size: 14px; outline: none;
   }
-  .modal input[type=text]:focus { border-color: #003087; }
+  .modal input[type=text]:focus, .modal input[type=password]:focus { border-color: #003087; }
+  .modal .status { margin-top: 14px; font-size: 13px; line-height: 1.5; min-height: 20px; }
+  .modal .status.err { color: #b00020; }
+  .modal .status.ok { color: #0a7c3e; }
+  .modal .status.busy { color: #555; }
   .modal textarea {
     width: 100%; border: 1px solid #ccc; border-radius: 6px; padding: 12px; font-size: 14px;
     line-height: 1.6; resize: vertical; outline: none; min-height: 160px; font-family: 'Segoe UI', Arial, sans-serif;
@@ -237,6 +241,7 @@
   <button class="btn btn-secondary" onclick="backupSave()" title="Télécharge toute ta bibliothèque dans un fichier .json (pour la transférer sur un autre appareil)">⬇ Sauvegarder (.json)</button>
   <button class="btn btn-secondary" onclick="document.getElementById('restoreFile').click()" title="Recharge une sauvegarde .json — remplace la bibliothèque actuelle">⬆ Restaurer (.json)</button>
   <input type="file" id="restoreFile" accept="application/json,.json" style="display:none" onchange="backupRestore(this)">
+  <button class="btn btn-secondary" onclick="openSeedModal()" title="Télécharge la bibliothèque des 145 corrigés depuis le dépôt et la déchiffre avec ton mot de passe">🔐 Charger les 145 corrigés</button>
 </div>
 
 <!-- Main card (library list OR practice phases) -->
@@ -261,6 +266,28 @@
       <button class="btn btn-primary" onclick="saveNewText(true)">💾 Sauvegarder et pratiquer →</button>
       <button class="btn btn-secondary" onclick="saveNewText(false)">💾 Sauvegarder seulement</button>
       <button class="btn btn-ghost" onclick="closeAddModal()">Annuler</button>
+    </div>
+  </div>
+</div>
+
+<!-- Seed modal — bibliothèque chiffrée publiée sur le dépôt -->
+<div class="modal-overlay" id="seedModal">
+  <div class="modal">
+    <h2>🔐 Charger les 145 corrigés</h2>
+    <p class="help">
+      La bibliothèque est stockée <strong>chiffrée</strong> sur le dépôt. Saisis ta phrase de passe :
+      elle est déchiffrée dans ce navigateur, jamais envoyée ailleurs.
+      <br><br>
+      Une seule fois par appareil — ensuite les textes restent enregistrés localement.
+      Tes textes déjà présents ne sont pas écrasés.
+    </p>
+    <label>Phrase de passe</label>
+    <input type="password" id="seedPwd" placeholder="••••••••••••" autocomplete="off"
+           onkeydown="if(event.key==='Enter')loadSeed()">
+    <div class="status" id="seedStatus"></div>
+    <div class="modal-actions">
+      <button class="btn btn-primary" id="seedGo" onclick="loadSeed()">🔓 Déchiffrer et charger</button>
+      <button class="btn btn-ghost" onclick="closeSeedModal()">Annuler</button>
     </div>
   </div>
 </div>
@@ -743,10 +770,9 @@ function backupRestore(input) {
   const reader = new FileReader();
   reader.onload = function () {
     try {
-      const parsed = JSON.parse(reader.result);
       // accepte le format enrichi {app, data} ou l'objet brut {texts:[...]}
-      const data = (parsed && parsed.app === 'tef-paragraphe' && parsed.data) ? parsed.data : parsed;
-      if (!data || !Array.isArray(data.texts)) throw new Error('format');
+      const data = normalizePayload(JSON.parse(reader.result));
+      if (!data) throw new Error('format');
       const incoming = data.texts.length;
       const currentN = lib.texts.length;
       if (!confirm('Restaurer ' + incoming + ' texte(s) ?\n\nCela REMPLACE la bibliothèque actuelle (' + currentN + ' texte(s)) sur cet appareil. Irréversible.')) {
@@ -764,6 +790,143 @@ function backupRestore(input) {
     }
   };
   reader.readAsText(file);
+}
+
+// ════════════════════════════════════════════════════════════════════
+//  Bibliothèque chiffrée — les 145 corrigés, publiés sur le dépôt
+//
+//  Pourquoi chiffré : les corrigés viennent de tefcanada.info (contenu
+//  tiers). Le dépôt est public, donc le fichier y est déposé en AES-256-GCM
+//  et ne s'ouvre qu'avec la phrase de passe. Produit par
+//  « 04 System/(C) encrypt-seed.py » dans le coffre.
+//
+//  Pas de cache de mot de passe, volontairement : une fois déchiffrée, la
+//  bibliothèque vit dans le localStorage de cet appareil. La phrase de passe
+//  ne sert donc qu'UNE fois par appareil — la mettre en cache n'apporterait
+//  rien et ferait traîner un secret de plus.
+// ════════════════════════════════════════════════════════════════════
+
+const SEED_URL = 'data/seed.enc.json';
+const SEED_FORMAT = 'tef-enc-v1';
+
+/** Accepte le format enrichi {app, data} ou l'objet brut {texts:[…]}. */
+function normalizePayload(parsed) {
+  const data = (parsed && parsed.app === 'tef-paragraphe' && parsed.data) ? parsed.data : parsed;
+  return (data && Array.isArray(data.texts)) ? data : null;
+}
+
+function openSeedModal() {
+  document.getElementById('seedPwd').value = '';
+  setSeedStatus('', '');
+  document.getElementById('seedModal').classList.add('active');
+  document.getElementById('seedPwd').focus();
+}
+function closeSeedModal() { document.getElementById('seedModal').classList.remove('active'); }
+
+function setSeedStatus(msg, cls) {
+  const el = document.getElementById('seedStatus');
+  el.textContent = msg;
+  el.className = 'status' + (cls ? ' ' + cls : '');
+}
+
+/** base64 → Uint8Array (sans spread : le ciphertext fait ~300 Ko). */
+function b64ToBytes(s) { return Uint8Array.from(atob(s), c => c.charCodeAt(0)); }
+
+/** PBKDF2-SHA256 → clé AES-256-GCM. Doit rester identique à (C) encrypt-seed.py. */
+async function deriveSeedKey(password, salt, iterations) {
+  const base = await crypto.subtle.importKey(
+    'raw', new TextEncoder().encode(password), 'PBKDF2', false, ['deriveKey']
+  );
+  return crypto.subtle.deriveKey(
+    { name: 'PBKDF2', salt: salt, iterations: iterations || 310000, hash: 'SHA-256' },
+    base,
+    { name: 'AES-GCM', length: 256 },
+    false,
+    ['decrypt']
+  );
+}
+
+/** Fusionne sans écraser : un texte déjà présent garde ses tentatives locales. */
+function mergeSeedTexts(incoming) {
+  const seen = new Set((lib.texts || []).map(t => t.id));
+  let added = 0, kept = 0;
+  incoming.forEach(t => {
+    if (seen.has(t.id)) { kept++; return; }
+    lib.texts.push(t);
+    seen.add(t.id);
+    added++;
+  });
+  return { added: added, kept: kept };
+}
+
+async function loadSeed() {
+  const pwd = document.getElementById('seedPwd').value;
+  if (!pwd) { setSeedStatus('Saisis ta phrase de passe.', 'err'); return; }
+  if (!window.crypto || !crypto.subtle) {
+    setSeedStatus('✕ Ce navigateur n\'expose pas Web Crypto (contexte non sécurisé ?). Ouvre la version HTTPS en ligne.', 'err');
+    return;
+  }
+
+  const btn = document.getElementById('seedGo');
+  btn.disabled = true;
+
+  try {
+    // ── 1. Télécharger l'enveloppe chiffrée ──
+    setSeedStatus('Téléchargement du fichier chiffré…', 'busy');
+    let env;
+    try {
+      const res = await fetch(SEED_URL, { cache: 'no-store' });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      env = await res.json();
+    } catch (netErr) {
+      if (location.protocol === 'file:') {
+        setSeedStatus('✕ En ouvrant le fichier en local (file://), le navigateur bloque le téléchargement. '
+          + 'Utilise la version en ligne (arish813.github.io/tef-trainers/paragraphe.html), '
+          + 'ou le bouton « ⬆ Restaurer (.json) » avec le seed en clair du coffre.', 'err');
+      } else {
+        setSeedStatus('✕ Fichier chiffré introuvable (' + SEED_URL + '). '
+          + 'Il doit d\'abord être publié via « (C) encrypt-seed.py ». Détail : ' + netErr.message, 'err');
+      }
+      return;
+    }
+
+    if (!env || env.format !== SEED_FORMAT) {
+      setSeedStatus('✕ Format de fichier inattendu (attendu : ' + SEED_FORMAT + ').', 'err');
+      return;
+    }
+
+    // ── 2. Déchiffrer ──
+    const announced = (env.meta && env.meta.texts) || '?';
+    setSeedStatus('Déchiffrement de ' + announced + ' textes… quelques secondes.', 'busy');
+    await new Promise(r => setTimeout(r, 30)); // laisse le message s'afficher avant le calcul bloquant
+
+    let plain;
+    try {
+      const key = await deriveSeedKey(pwd, b64ToBytes(env.salt), env.iterations);
+      plain = await crypto.subtle.decrypt(
+        { name: 'AES-GCM', iv: b64ToBytes(env.iv) }, key, b64ToBytes(env.ciphertext)
+      );
+    } catch (cryptoErr) {
+      setSeedStatus('✕ Phrase de passe incorrecte.', 'err');
+      return;
+    }
+
+    const data = normalizePayload(JSON.parse(new TextDecoder().decode(plain)));
+    if (!data) { setSeedStatus('✕ Contenu déchiffré illisible.', 'err'); return; }
+
+    // ── 3. Fusionner et enregistrer ──
+    const r = mergeSeedTexts(data.texts);
+    saveLib();
+    closeSeedModal();
+    init();
+    setTip('✓ Bibliothèque chargée — ' + r.added + ' texte(s) ajouté(s)'
+      + (r.kept ? ' · ' + r.kept + ' déjà présent(s), progression conservée' : '')
+      + '. Total : ' + lib.texts.length + '.');
+  } catch (e) {
+    setSeedStatus('✕ Erreur inattendue : ' + e.message, 'err');
+  } finally {
+    btn.disabled = false;
+  }
 }
 
 // ── Init ──

@@ -9,3 +9,7 @@ Thumbs.db
 *~
 .vscode/
 .idea/
+
+# Le seed EN CLAIR ne doit jamais etre publie — seule la version chiffree l'est
+*seed*.json
+!data/seed.enc.json
